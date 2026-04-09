@@ -1,0 +1,47 @@
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+
+# Node / Dashboard
+node_modules/
+apps/dashboard/dist/
+apps/dashboard/build/
+
+# Lambda build artifacts
+apps/lambdas/**/package/
+apps/lambdas/**/*.zip
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.github/
+
+# Docs
+docs/
+README.md
+
+# Claude
+.claude/
