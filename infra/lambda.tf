@@ -52,7 +52,7 @@ resource "aws_iam_role_policy" "lambda_exec" {
 
 # Placeholder zip — CI/CD replaces with real code
 data "archive_file" "placeholder" {
-  type        = "archive"
+  type        = "zip"
   output_path = "${path.module}/.build/placeholder.zip"
 
   source {
