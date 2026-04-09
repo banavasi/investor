@@ -3,37 +3,22 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Log Groups (7-day retention)
+# Log Groups (30-day retention)
 # -----------------------------------------------------------------------------
 
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}"
-  retention_in_days = 7
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "apigateway_logs" {
   name              = "/aws/apigateway/${var.project_name}-${var.environment}"
-  retention_in_days = 7
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  retention_in_days = 30
 }
 
 resource "aws_cloudwatch_log_group" "ec2_logs" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}"
-  retention_in_days = 7
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  retention_in_days = 30
 }
 
 # -----------------------------------------------------------------------------
@@ -55,11 +40,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   dimensions = {
     FunctionName = aws_lambda_function.trade_executor.function_name
   }
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "apigateway_4xx" {
@@ -76,11 +56,6 @@ resource "aws_cloudwatch_metric_alarm" "apigateway_4xx" {
 
   dimensions = {
     ApiId = aws_apigatewayv2_api.websocket.id
-  }
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
   }
 }
 
@@ -99,32 +74,22 @@ resource "aws_cloudwatch_metric_alarm" "apigateway_5xx" {
   dimensions = {
     ApiId = aws_apigatewayv2_api.websocket.id
   }
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "dynamodb_throttle" {
   alarm_name          = "${var.project_name}-${var.environment}-dynamodb-throttle"
-  alarm_description   = "DynamoDB consumed write capacity exceeds threshold"
+  alarm_description   = "DynamoDB write throttle events detected"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1
-  metric_name         = "ConsumedWriteCapacityUnits"
+  metric_name         = "WriteThrottleEvents"
   namespace           = "AWS/DynamoDB"
   period              = 60
   statistic           = "Sum"
-  threshold           = 100
+  threshold           = 1
   treat_missing_data  = "notBreaching"
 
   dimensions = {
     TableName = aws_dynamodb_table.trading.name
-  }
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
   }
 }
 
