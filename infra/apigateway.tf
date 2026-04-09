@@ -52,11 +52,48 @@ resource "aws_apigatewayv2_route" "ws_default" {
   target    = "integrations/${aws_apigatewayv2_integration.ws_default.id}"
 }
 
+# IAM role for API Gateway CloudWatch logging
+resource "aws_iam_role" "apigateway_cloudwatch" {
+  name = "${var.project_name}-apigw-cloudwatch"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "apigateway.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "apigateway_cloudwatch" {
+  role       = aws_iam_role.apigateway_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+resource "aws_api_gateway_account" "main" {
+  cloudwatch_role_arn = aws_iam_role.apigateway_cloudwatch.arn
+}
+
 # Stage
 resource "aws_apigatewayv2_stage" "ws_prod" {
   api_id      = aws_apigatewayv2_api.websocket.id
   name        = var.environment
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.apigateway_logs.arn
+    format = jsonencode({
+      requestId          = "$context.requestId"
+      ip                 = "$context.identity.sourceIp"
+      requestTime        = "$context.requestTime"
+      routeKey           = "$context.routeKey"
+      status             = "$context.status"
+      connectionId       = "$context.connectionId"
+      integrationLatency = "$context.integration.latency"
+      error              = "$context.error.message"
+    })
+  }
 
   default_route_settings {
     throttling_burst_limit = 50
@@ -64,6 +101,8 @@ resource "aws_apigatewayv2_stage" "ws_prod" {
   }
 
   tags = { Name = "${var.project_name}-ws-${var.environment}" }
+
+  depends_on = [aws_api_gateway_account.main]
 }
 
 # Permission for API GW to invoke Lambda
