@@ -1,0 +1,109 @@
+# Trading Copilot — deploy pipeline
+# Runs Terraform plan/apply then deploys the application via scripts/deploy.sh.
+# Triggers on pushes to main that touch app/infra code, or via manual dispatch.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'infra/**'
+      - 'Dockerfile'
+      - 'scripts/deploy.sh'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: "1.9.0"
+
+jobs:
+  terraform:
+    name: Terraform Plan & Apply
+    runs-on: ubuntu-latest
+    outputs:
+      has-changes: ${{ steps.plan.outputs.has-changes }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: infra
+        run: |
+          terraform plan -input=false -out=tfplan \
+            -var="ec2_key_pair_name=${{ secrets.EC2_KEY_PAIR }}" \
+            -var="allowed_ssh_cidr=${{ secrets.ALLOWED_SSH_CIDR }}" \
+            -var="alpaca_api_key=${{ secrets.ALPACA_API_KEY }}" \
+            -var="alpaca_secret_key=${{ secrets.ALPACA_SECRET_KEY }}"
+
+          if terraform show -json tfplan | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if any(rc['change']['actions']!=['no-op'] for rc in d.get('resource_changes',[])) else 1)" 2>/dev/null; then
+            echo "has-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Terraform Apply
+        if: steps.plan.outputs.has-changes == 'true'
+        working-directory: infra
+        run: terraform apply -auto-approve -input=false tfplan
+
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: always() && needs.terraform.result == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init (for outputs)
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Run deploy script
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
