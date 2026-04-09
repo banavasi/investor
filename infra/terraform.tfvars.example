@@ -1,0 +1,26 @@
+# =============================================================================
+# terraform.tfvars — Fill in your values
+# =============================================================================
+# Do NOT commit this file. It's in .gitignore.
+# For CI/CD, set via GitHub Secrets → TF_VAR_* env vars.
+# =============================================================================
+
+aws_region        = "us-east-1"
+environment       = "prod"
+project_name      = "trading-copilot"
+ec2_instance_type = "t3.micro"
+
+# Create key pair in AWS Console first
+ec2_key_pair_name = "trading-copilot-key"
+
+# Your IP: curl https://checkip.amazonaws.com
+allowed_ssh_cidr = "YOUR_IP/32"
+
+# Alpaca (paper trading keys to start)
+alpaca_api_key    = "YOUR_ALPACA_API_KEY"
+alpaca_secret_key = "YOUR_ALPACA_SECRET_KEY"
+
+# Optional
+telegram_bot_token = ""
+telegram_chat_id   = ""
+domain_name        = ""

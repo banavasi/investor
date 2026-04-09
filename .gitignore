@@ -1,0 +1,40 @@
+# Terraform
+infra/.terraform/
+infra/.build/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfvars
+!infra/terraform.tfvars.example
+infra/.terraform.lock.hcl
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Node / React
+node_modules/
+apps/dashboard/dist/
+apps/dashboard/build/
+.env
+.env.local
+.env.*.local
+
+# Lambda build artifacts
+apps/lambdas/**/package/
+apps/lambdas/**/*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Secrets
+*.pem
+*.key
