@@ -56,4 +56,56 @@ trading-copilot/
 └── scripts/              # Bootstrap, playbook upload CLI
 ```
 
+## CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+- **CI** (`.github/workflows/ci.yml`) — Runs on every push/PR: Python syntax checks, Terraform fmt/validate
+- **Deploy** (`.github/workflows/deploy.yml`) — Runs on push to `main`: Terraform plan/apply, Docker build + ECR push, S3 deploy, CloudFront invalidation
+
+### Required GitHub Secrets
+
+Configure in Settings > Secrets and variables > Actions:
+
+| Secret | Description |
+|--------|-------------|
+| `AWS_ROLE_ARN` | IAM role ARN for GitHub OIDC authentication |
+| `ALPACA_API_KEY` | Alpaca Markets API key |
+| `ALPACA_SECRET_KEY` | Alpaca Markets secret key |
+| `EC2_KEY_PAIR` | EC2 key pair name for SSH access |
+| `ALLOWED_SSH_CIDR` | CIDR block for SSH access (e.g., `1.2.3.4/32`) |
+
+### OIDC Setup
+
+Create an IAM role with this trust policy (replace `ACCOUNT_ID` and `OWNER/REPO`):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+      },
+      "StringLike": {
+        "token.actions.githubusercontent.com:sub": "repo:OWNER/REPO:*"
+      }
+    }
+  }]
+}
+```
+
+The role needs permissions for: EC2, Lambda, API Gateway, DynamoDB, S3, CloudFront, CloudWatch, ECR, IAM, Logs.
+
+### Monitoring
+
+- **CloudWatch Dashboard**: Auto-created via Terraform — Lambda metrics, API Gateway errors, DynamoDB capacity
+- **Alarms**: Lambda errors, API Gateway 4xx/5xx, DynamoDB throttling
+- **Access Logs**: API Gateway WebSocket logs in CloudWatch
+
 ## Monthly Cost: ~$1.50 (year 1)
