@@ -37,3 +37,23 @@ output "trade_executor_lambda" {
   description = "Trade executor Lambda function name"
   value       = aws_lambda_function.trade_executor.function_name
 }
+
+output "cloudwatch_log_group_lambda" {
+  description = "CloudWatch log group name for Lambda functions"
+  value       = aws_cloudwatch_log_group.lambda_logs.name
+}
+
+output "cloudwatch_log_group_apigateway" {
+  description = "CloudWatch log group name for API Gateway"
+  value       = aws_cloudwatch_log_group.apigateway_logs.name
+}
+
+output "cloudwatch_log_group_ec2" {
+  description = "CloudWatch log group name for EC2 instances"
+  value       = aws_cloudwatch_log_group.ec2_logs.name
+}
+
+output "cloudwatch_dashboard_url" {
+  description = "URL to the CloudWatch dashboard in the AWS Console"
+  value       = "https://${data.aws_region.current.name}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${aws_cloudwatch_dashboard.trading_copilot.dashboard_name}"
+}
