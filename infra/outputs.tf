@@ -57,3 +57,8 @@ output "cloudwatch_dashboard_url" {
   description = "URL to the CloudWatch dashboard in the AWS Console"
   value       = "https://${data.aws_region.current.name}.console.aws.amazon.com/cloudwatch/home?region=${data.aws_region.current.name}#dashboards:name=${aws_cloudwatch_dashboard.trading_copilot.dashboard_name}"
 }
+
+output "github_actions_role_arn" {
+  description = "IAM role ARN for GitHub Actions OIDC — set as AWS_ROLE_ARN secret"
+  value       = aws_iam_role.github_actions.arn
+}
