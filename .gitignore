@@ -23,6 +23,11 @@ apps/dashboard/build/
 .env
 .env.local
 .env.*.local
+infra/.env
+infra/.env.*
+!infra/.env.example
+!infra/.env.development.example
+!infra/.env.production.example
 
 # Lambda build artifacts
 apps/lambdas/**/package/

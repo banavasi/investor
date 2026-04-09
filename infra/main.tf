@@ -12,7 +12,7 @@ terraform {
     bucket         = "trading-copilot-tf-state"
     key            = "infra/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "trading-copilot-tf-locks"
+    use_lockfile   = true
     encrypt        = true
   }
 }

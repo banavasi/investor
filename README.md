@@ -20,6 +20,29 @@ terraform plan
 terraform apply
 ```
 
+## Per-Environment Table Name via `.env`
+
+If you only want environment-specific control for the DynamoDB table name:
+
+```bash
+cd infra
+
+# one-time setup
+cp .env.development.example .env.development
+cp .env.production.example .env.production
+
+# development
+set -a && source .env.development && set +a
+terraform plan
+
+# production
+set -a && source .env.production && set +a
+terraform plan
+```
+
+`TF_VAR_dynamodb_table_name` maps to Terraform variable `dynamodb_table_name`.
+If unset, Terraform falls back to `${project_name}-${environment}`.
+
 ## Project Structure
 
 ```

@@ -13,7 +13,7 @@
 # =============================================================================
 
 resource "aws_dynamodb_table" "trading" {
-  name         = "${var.project_name}-${var.environment}"
+  name         = var.dynamodb_table_name != "" ? var.dynamodb_table_name : "${var.project_name}-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "PK"
   range_key    = "SK"

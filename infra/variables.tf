@@ -16,6 +16,12 @@ variable "project_name" {
   default     = "trading-copilot"
 }
 
+variable "dynamodb_table_name" {
+  description = "Explicit DynamoDB table name override (optional)"
+  type        = string
+  default     = ""
+}
+
 variable "ec2_instance_type" {
   description = "EC2 instance type for heartbeat engine"
   type        = string
