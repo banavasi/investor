@@ -54,12 +54,13 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: infra
+        env:
+          TF_VAR_ec2_key_pair_name: ${{ secrets.EC2_KEY_PAIR }}
+          TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
+          TF_VAR_alpaca_api_key: ${{ secrets.ALPACA_API_KEY }}
+          TF_VAR_alpaca_secret_key: ${{ secrets.ALPACA_SECRET_KEY }}
         run: |
-          terraform plan -input=false -out=tfplan \
-            -var="ec2_key_pair_name=${{ secrets.EC2_KEY_PAIR }}" \
-            -var="allowed_ssh_cidr=${{ secrets.ALLOWED_SSH_CIDR }}" \
-            -var="alpaca_api_key=${{ secrets.ALPACA_API_KEY }}" \
-            -var="alpaca_secret_key=${{ secrets.ALPACA_SECRET_KEY }}"
+          terraform plan -input=false -out=tfplan
 
           if terraform show -json tfplan | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if any(rc['change']['actions']!=['no-op'] for rc in d.get('resource_changes',[])) else 1)" 2>/dev/null; then
             echo "has-changes=true" >> "$GITHUB_OUTPUT"
@@ -70,6 +71,11 @@ jobs:
       - name: Terraform Apply
         if: steps.plan.outputs.has-changes == 'true'
         working-directory: infra
+        env:
+          TF_VAR_ec2_key_pair_name: ${{ secrets.EC2_KEY_PAIR }}
+          TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
+          TF_VAR_alpaca_api_key: ${{ secrets.ALPACA_API_KEY }}
+          TF_VAR_alpaca_secret_key: ${{ secrets.ALPACA_SECRET_KEY }}
         run: terraform apply -auto-approve -input=false tfplan
 
   deploy:
