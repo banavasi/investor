@@ -92,6 +92,9 @@ resource "aws_apigatewayv2_stage" "ws_prod" {
       connectionId       = "$context.connectionId"
       integrationLatency = "$context.integration.latency"
       error              = "$context.error.message"
+      eventType          = "$context.eventType"
+      messageId          = "$context.messageId"
+      integrationError   = "$context.integrationErrorMessage"
     })
   }
 
