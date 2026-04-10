@@ -62,3 +62,18 @@ output "github_actions_role_arn" {
   description = "IAM role ARN for GitHub Actions OIDC — set as AWS_ROLE_ARN secret"
   value       = aws_iam_role.github_actions.arn
 }
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = aws_cognito_user_pool.main.id
+}
+
+output "cognito_client_id" {
+  description = "Cognito App Client ID for the dashboard"
+  value       = aws_cognito_user_pool_client.dashboard.id
+}
+
+output "cognito_domain" {
+  description = "Cognito hosted UI domain"
+  value       = "https://${aws_cognito_user_pool_domain.main.domain}.auth.${data.aws_region.current.name}.amazoncognito.com"
+}
