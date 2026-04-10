@@ -19,7 +19,7 @@ data "aws_ami" "al2023" {
 
 resource "aws_security_group" "heartbeat" {
   name        = "${var.project_name}-heartbeat-sg"
-  description = "Heartbeat EC2 — SSH restricted, all outbound"
+  description = "Heartbeat EC2 - SSH restricted, all outbound"
 
   ingress {
     description = "SSH from allowed IP"
