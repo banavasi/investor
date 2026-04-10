@@ -1,5 +1,5 @@
 # =============================================================================
-# Lambda — Trade Executor + WebSocket Push
+# Lambda — CRUD, Trade, Compute Proxy, WebSocket Push
 # =============================================================================
 
 resource "aws_iam_role" "lambda_exec" {
@@ -45,6 +45,12 @@ resource "aws_iam_role_policy" "lambda_exec" {
         Effect   = "Allow"
         Action   = "execute-api:ManageConnections"
         Resource = "arn:aws:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${aws_apigatewayv2_api.websocket.id}/*"
+      },
+      {
+        Sid      = "VPCAccess"
+        Effect   = "Allow"
+        Action   = ["ec2:CreateNetworkInterface", "ec2:DescribeNetworkInterfaces", "ec2:DeleteNetworkInterface"]
+        Resource = "*"
       }
     ]
   })
@@ -61,7 +67,92 @@ data "archive_file" "placeholder" {
   }
 }
 
-# --- Trade Executor ---
+# --- CRUD ---
+resource "aws_lambda_function" "crud" {
+  function_name = "${var.project_name}-crud"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "handler.handler"
+  runtime       = "python3.12"
+  timeout       = 10
+  memory_size   = 128
+
+  filename         = data.archive_file.placeholder.output_path
+  source_code_hash = data.archive_file.placeholder.output_base64sha256
+
+  environment {
+    variables = {
+      TABLE_NAME  = aws_dynamodb_table.trading.name
+      ENVIRONMENT = var.environment
+    }
+  }
+
+  tags = { Name = "${var.project_name}-crud" }
+
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
+}
+
+# --- Trade ---
+resource "aws_lambda_function" "trade" {
+  function_name = "${var.project_name}-trade"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "handler.handler"
+  runtime       = "python3.12"
+  timeout       = 30
+  memory_size   = 256
+
+  filename         = data.archive_file.placeholder.output_path
+  source_code_hash = data.archive_file.placeholder.output_base64sha256
+
+  environment {
+    variables = {
+      TABLE_NAME        = aws_dynamodb_table.trading.name
+      ALPACA_API_KEY    = var.alpaca_api_key
+      ALPACA_SECRET_KEY = var.alpaca_secret_key
+      ENVIRONMENT       = var.environment
+    }
+  }
+
+  tags = { Name = "${var.project_name}-trade" }
+
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
+}
+
+# --- Compute Proxy (in VPC — talks to EC2) ---
+resource "aws_lambda_function" "compute_proxy" {
+  function_name = "${var.project_name}-compute-proxy"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "handler.handler"
+  runtime       = "python3.12"
+  timeout       = 120
+  memory_size   = 128
+
+  filename         = data.archive_file.placeholder.output_path
+  source_code_hash = data.archive_file.placeholder.output_base64sha256
+
+  vpc_config {
+    subnet_ids         = aws_subnet.public[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      EC2_PRIVATE_IP = aws_instance.heartbeat.private_ip
+      ENVIRONMENT    = var.environment
+    }
+  }
+
+  tags = { Name = "${var.project_name}-compute-proxy" }
+
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
+}
+
+# --- Trade Executor (placeholder for future use) ---
 resource "aws_lambda_function" "trade_executor" {
   function_name = "${var.project_name}-trade-executor"
   role          = aws_iam_role.lambda_exec.arn
