@@ -2,6 +2,11 @@
 # EC2 — Heartbeat Engine
 # =============================================================================
 
+# CloudFront IP ranges — used to restrict API port to CloudFront only
+data "aws_ec2_managed_prefix_list" "cloudfront" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -30,11 +35,11 @@ resource "aws_security_group" "heartbeat" {
   }
 
   ingress {
-    description = "API from anywhere"
-    from_port   = 8000
-    to_port     = 8000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "API from CloudFront only"
+    from_port       = 8000
+    to_port         = 8000
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
   }
 
   egress {

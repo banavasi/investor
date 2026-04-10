@@ -61,15 +61,19 @@ resource "aws_cloudfront_distribution" "dashboard" {
   }
 
   origin {
-    domain_name = "${aws_apigatewayv2_api.websocket.id}.execute-api.${data.aws_region.current.name}.amazonaws.com"
-    origin_id   = "apigw-websocket"
-    origin_path = "/${var.environment}"
+    domain_name = aws_instance.heartbeat.public_dns
+    origin_id   = "ec2-api"
 
     custom_origin_config {
-      http_port              = 80
+      http_port              = 8000
       https_port             = 443
-      origin_protocol_policy = "https-only"
+      origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
+    }
+
+    custom_header {
+      name  = "X-CloudFront-Secret"
+      value = "cf-${var.project_name}-${data.aws_caller_identity.current.account_id}"
     }
   }
 
@@ -77,11 +81,11 @@ resource "aws_cloudfront_distribution" "dashboard" {
     path_pattern     = "/api/*"
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "apigw-websocket"
+    target_origin_id = "ec2-api"
 
     forwarded_values {
       query_string = true
-      headers      = ["Authorization", "Content-Type"]
+      headers      = ["Authorization", "Content-Type", "Accept"]
       cookies { forward = "none" }
     }
 

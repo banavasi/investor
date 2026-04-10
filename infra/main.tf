@@ -9,9 +9,9 @@ terraform {
   }
 
   backend "s3" {
-    bucket       = "trading-copilot-tf-state"
-    key          = "infra/terraform.tfstate"
-    region       = "us-east-1"
+    bucket  = "trading-copilot-tf-state"
+    key     = "infra/terraform.tfstate"
+    region  = "us-east-1"
     encrypt = true
   }
 }
