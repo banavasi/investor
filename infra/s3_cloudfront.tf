@@ -61,19 +61,14 @@ resource "aws_cloudfront_distribution" "dashboard" {
   }
 
   origin {
-    domain_name = aws_instance.heartbeat.public_dns
-    origin_id   = "ec2-api"
+    domain_name = "${aws_apigatewayv2_api.rest.id}.execute-api.${data.aws_region.current.name}.amazonaws.com"
+    origin_id   = "rest-api"
 
     custom_origin_config {
-      http_port              = 8000
+      http_port              = 80
       https_port             = 443
-      origin_protocol_policy = "http-only"
+      origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
-    }
-
-    custom_header {
-      name  = "X-CloudFront-Secret"
-      value = "cf-${var.project_name}-${data.aws_caller_identity.current.account_id}"
     }
   }
 
@@ -81,7 +76,7 @@ resource "aws_cloudfront_distribution" "dashboard" {
     path_pattern     = "/api/*"
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "ec2-api"
+    target_origin_id = "rest-api"
 
     forwarded_values {
       query_string = true
