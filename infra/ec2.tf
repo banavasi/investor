@@ -29,6 +29,14 @@ resource "aws_security_group" "heartbeat" {
     cidr_blocks = [var.allowed_ssh_cidr]
   }
 
+  ingress {
+    description = "API from anywhere"
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     description = "All outbound"
     from_port   = 0
@@ -130,6 +138,20 @@ resource "aws_instance" "heartbeat" {
     curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
       -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
+
+    # Pull and run API container from ECR
+    REGION="${var.aws_region}"
+    ACCOUNT_ID="${data.aws_caller_identity.current.account_id}"
+    ECR_URL="${aws_ecr_repository.api.repository_url}"
+    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+    docker pull $ECR_URL:latest || true
+    docker run -d --name trading-copilot-api --restart unless-stopped \
+      -p 8000:8000 \
+      -e TABLE_NAME="${aws_dynamodb_table.trading.name}" \
+      -e AWS_REGION="$REGION" \
+      -e ENVIRONMENT="${var.environment}" \
+      $ECR_URL:latest || true
+
     echo "bootstrap complete" > /home/ec2-user/bootstrap.log
   EOF
 
