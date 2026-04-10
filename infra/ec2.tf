@@ -1,11 +1,6 @@
 # =============================================================================
-# EC2 — Heartbeat Engine
+# EC2 — Heartbeat Engine (in VPC public subnet)
 # =============================================================================
-
-# CloudFront IP ranges — used to restrict API port to CloudFront only
-data "aws_ec2_managed_prefix_list" "cloudfront" {
-  name = "com.amazonaws.global.cloudfront.origin-facing"
-}
 
 data "aws_ami" "al2023" {
   most_recent = true
@@ -24,7 +19,8 @@ data "aws_ami" "al2023" {
 
 resource "aws_security_group" "heartbeat" {
   name        = "${var.project_name}-heartbeat-sg"
-  description = "Heartbeat EC2 - SSH restricted, all outbound"
+  description = "Heartbeat EC2 - SSH restricted, port 8000 from Lambda SG only"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     description = "SSH from allowed IP"
@@ -35,11 +31,11 @@ resource "aws_security_group" "heartbeat" {
   }
 
   ingress {
-    description     = "API from CloudFront only"
+    description     = "API from Lambda SG only"
     from_port       = 8000
     to_port         = 8000
     protocol        = "tcp"
-    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
+    security_groups = [aws_security_group.lambda.id]
   }
 
   egress {
@@ -123,6 +119,7 @@ resource "aws_instance" "heartbeat" {
   ami                    = data.aws_ami.al2023.id
   instance_type          = var.ec2_instance_type
   key_name               = var.ec2_key_pair_name
+  subnet_id              = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.heartbeat.id]
   iam_instance_profile   = aws_iam_instance_profile.heartbeat.name
 
