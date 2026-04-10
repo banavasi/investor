@@ -59,6 +59,7 @@ jobs:
           TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
           TF_VAR_alpaca_api_key: ${{ secrets.ALPACA_API_KEY }}
           TF_VAR_alpaca_secret_key: ${{ secrets.ALPACA_SECRET_KEY }}
+          TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           terraform plan -input=false -out=tfplan
 
@@ -76,6 +77,7 @@ jobs:
           TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
           TF_VAR_alpaca_api_key: ${{ secrets.ALPACA_API_KEY }}
           TF_VAR_alpaca_secret_key: ${{ secrets.ALPACA_SECRET_KEY }}
+          TF_VAR_anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         run: terraform apply -auto-approve -input=false tfplan
 
   deploy:
@@ -106,6 +108,47 @@ jobs:
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Python (for Lambda packaging)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Package Lambda - CRUD
+        run: |
+          mkdir -p .build/crud
+          cp apps/lambdas/shared/*.py .build/crud/
+          cp apps/lambdas/crud/handler.py .build/crud/
+          pip install -r apps/lambdas/crud/requirements.txt -t .build/crud/ --quiet
+          cd .build/crud && zip -r ../../.build/crud.zip . -x '*.pyc' '__pycache__/*'
+
+      - name: Package Lambda - Trade
+        run: |
+          mkdir -p .build/trade
+          cp apps/lambdas/shared/*.py .build/trade/
+          cp apps/lambdas/trade/handler.py .build/trade/
+          pip install -r apps/lambdas/trade/requirements.txt -t .build/trade/ --quiet
+          cd .build/trade && zip -r ../../.build/trade.zip . -x '*.pyc' '__pycache__/*'
+
+      - name: Package Lambda - Compute Proxy
+        run: |
+          mkdir -p .build/compute_proxy
+          cp apps/lambdas/shared/*.py .build/compute_proxy/
+          cp apps/lambdas/compute_proxy/handler.py .build/compute_proxy/
+          cd .build/compute_proxy && zip -r ../../.build/compute_proxy.zip . -x '*.pyc' '__pycache__/*'
+
+      - name: Deploy Lambda functions
+        run: |
+          for fn in crud trade compute-proxy; do
+            FN_NAME="trading-copilot-${fn}"
+            ZIP_NAME="${fn//-/_}"
+            echo "Deploying $FN_NAME from .build/${ZIP_NAME}.zip..."
+            aws lambda update-function-code \
+              --function-name "$FN_NAME" \
+              --zip-file "fileb://.build/${ZIP_NAME}.zip" \
+              --region ${{ env.AWS_REGION }} \
+              --no-cli-pager
+          done
 
       - name: Run deploy script
         run: |
