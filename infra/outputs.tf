@@ -77,3 +77,8 @@ output "cognito_domain" {
   description = "Cognito hosted UI domain"
   value       = "https://${aws_cognito_user_pool_domain.main.domain}.auth.${data.aws_region.current.name}.amazoncognito.com"
 }
+
+output "rest_api_endpoint" {
+  description = "REST API Gateway endpoint URL"
+  value       = aws_apigatewayv2_api.rest.api_endpoint
+}
