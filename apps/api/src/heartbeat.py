@@ -1,6 +1,5 @@
 import json
 
-import boto3
 import pandas as pd
 import pandas_ta as ta
 import requests
@@ -131,10 +130,12 @@ def fetch_indicators(symbol: str) -> dict:
     }
 
 
-def classify_signal_gemma(indicators: dict) -> dict:
-    """Use Bedrock Gemma 3 4B to classify the signal."""
+def classify_signal(indicators: dict) -> dict:
+    """Use Claude to classify the trading signal."""
+    import anthropic
+
     settings = get_settings()
-    bedrock = boto3.client("bedrock-runtime", region_name=settings.aws_region)
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
     prompt = f"""You are a stock signal classifier. Given these technical indicators,
 respond with ONLY a JSON object (no markdown, no explanation):
@@ -153,19 +154,19 @@ Bollinger Lower: {indicators['bb_lower']}
 Respond with this exact JSON structure:
 {{"signal": "bullish" or "bearish" or "neutral", "confidence": 0-100, "reason": "one sentence"}}"""
 
-    response = bedrock.converse(
-        modelId="us.google.gemma-3-4b-it-v1:0",
-        messages=[{"role": "user", "content": [{"text": prompt}]}],
-        inferenceConfig={"maxTokens": 200, "temperature": 0.1},
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=200,
+        temperature=0.1,
+        messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = response["output"]["message"]["content"][0]["text"]
-    cleaned = raw.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    raw = response.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
     try:
-        result = json.loads(cleaned)
+        result = json.loads(raw)
     except json.JSONDecodeError:
         result = {"signal": "error", "confidence": 0, "reason": f"Parse failed: {raw[:100]}"}
 
@@ -174,7 +175,7 @@ Respond with this exact JSON structure:
         "ai_signal": result.get("signal", "unknown"),
         "ai_confidence": result.get("confidence", 0),
         "ai_reason": result.get("reason", ""),
-        "model": "gemma-3-4b",
+        "model": "claude-haiku-4.5",
     }
 
 
@@ -187,7 +188,7 @@ def run_heartbeat(symbols: list[str], persist: bool = True) -> list[dict]:
             results.append(indicators)
             continue
 
-        classified = classify_signal_gemma(indicators)
+        classified = classify_signal(indicators)
         results.append(classified)
 
         if persist:

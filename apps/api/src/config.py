@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     alpaca_paper_mode: bool = True
     aws_region: str = "us-east-1"
     table_name: str = "trading-copilot-prod"
+    anthropic_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent / ".env",
